@@ -316,8 +316,8 @@ def _box(m, a, b, uvname):
 # --------------------------------------------------------------------------
 # Library of variants
 
-BROADLEAF_HEIGHTS = [3.5, 5, 6.5, 8, 10, 12, 14.5, 17]
-PALM_HEIGHTS = [6, 9, 12, 15, 18, 21]
+BROADLEAF_HEIGHTS = [3.5, 5, 6.5, 8, 10, 12, 14.5, 17, 20, 24, 28]
+PALM_HEIGHTS = [6, 9, 12, 15, 18, 21, 24, 27, 30]
 
 
 class PropLibrary:

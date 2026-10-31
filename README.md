@@ -9,7 +9,7 @@ It replaces the default, misaligned scenery with:
 | **Roads and beach aligned to the photo** | Exclusion zones remove X-Plane's default roads, beaches, autogen, forests and objects inside the area. The roads and sand you see are the ones in the photo, so they line up exactly. |
 | **3D buildings that match reality** | Every building is extruded from its real footprint and real height. In Hermosa Beach these come from the LA County LARIAC building import in OpenStreetMap: outlines traced from 4-inch aerial imagery, heights from LiDAR. Roofs are textured with the aerial photo itself. Walls use a generated stucco/storefront/glass atlas with lit windows at night. |
 | **Hermosa Beach Pier** | Built in 3D from its OSM outline: a photo-textured deck on concrete pilings, with lamps along both rails. |
-| **Trees** | Every tree crown visible in the aerial imagery is detected from NAIP's near-infrared band (NDVI plus crown texture, so lawns aren't mistaken for trees) and gets a 3D tree sized to the crown. Small isolated crowns along streets and near the beach become palms (Mexican fan or Canary date palms); larger crowns become broadleaf trees; plus cypress and shrubs. Trees mapped in OSM with a genus are added too. |
+| **Trees** | About 36,000 real trees from LA County's 2023 tree-tops dataset (LARIAC7: LiDAR heights plus 4-inch infrared imagery), each placed where it actually stands, at its measured height and crown size. Tall trees with small crowns become palms (Mexican fan or Canary date); the rest are broadleaf trees and shrubs. If that dataset is unavailable, trees are detected from NAIP's near-infrared band instead. Trees mapped in OSM with a genus are added too. |
 | **Street lights** | Cobra-head lights along every road (staggered or both sides depending on road class), acorn lamps on pedestrian ways and the pier. They glow at night. If OSM has real lamp positions, those are used instead. |
 | **Traffic (optional pack)** | `zzz_Hermosa_Beach_0_Traffic` lays X-Plane's own road network (moving cars, X-Plane street lighting) on every OSM street. **Experimental:** the road type numbers come from Laminar's road generator source and couldn't be checked in X-Plane 12. If roads look wrong, delete that folder. |
 
@@ -87,6 +87,7 @@ Each building is its own object, placed at its centroid. X-Plane then sets it on
 ## Credits and licences
 
 * Code: MIT.
+* Tree positions and heights: County of Los Angeles, LARIAC7 Tree Canopy Tops 2023, used under the [LARIAC terms of use](https://egis-lacounty.hub.arcgis.com/pages/terms-of-use). No endorsement by the County is implied.
 * Map data © OpenStreetMap contributors, [ODbL](https://www.openstreetmap.org/copyright). The building data originates from LA County LARIAC.
 * NAIP imagery: USDA Farm Production and Conservation Business Center, public domain.
 * DSFTool: Laminar Research xptools, downloaded at build time.

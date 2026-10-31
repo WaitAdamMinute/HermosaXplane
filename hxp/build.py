@@ -127,12 +127,16 @@ def build(cfg, root):
         print("Trees ...")
         veg_dir = os.path.join(data_dir, "veg")
         os.makedirs(veg_dir, exist_ok=True)
-        nrg = os.path.join(veg_dir, "nrg.jpg")
-        if not os.path.exists(nrg):
-            print("  no NAIP infrared mosaic - using RGB vegetation index from the photo")
-            nrg = os.path.join(veg_dir, "rgb_veg.jpg")
-            T.rgb_fallback(grid, img_dir, area, nrg)
-        crowns = T.detect(nrg, area, frame, building_polys + pier_polys, land, tcfg)
+        lariac = os.path.join(veg_dir, "lariac_trees.json")
+        if tcfg.get("source", "lariac") == "lariac" and os.path.exists(lariac):
+            crowns = T.lariac_crowns(lariac, frame, tcfg)
+        else:
+            nrg = os.path.join(veg_dir, "nrg.jpg")
+            if not os.path.exists(nrg):
+                print("  no NAIP infrared mosaic - using RGB vegetation index from the photo")
+                nrg = os.path.join(veg_dir, "rgb_veg.jpg")
+                T.rgb_fallback(grid, img_dir, area, nrg)
+            crowns = T.detect(nrg, area, frame, building_polys + pier_polys, land, tcfg)
         roads_geom = L.roads_union(osm, area_poly)
         coast_geom = unary_union(coast) if coast else None
         placed_t = T.place(crowns, T.osm_trees(osm), roads_geom, coast_geom, lib, tcfg, frame)
@@ -305,7 +309,9 @@ Install: copy this folder into "X-Plane/Custom Scenery/" and start X-Plane.
 It must be listed ABOVE any global/ortho mesh packs in
 Custom Scenery/scenery_packs.ini (new packs are added at the top).
 
-Data: (c) OpenStreetMap contributors, ODbL.  Imagery source: {cfg['imagery']['source']}
+Data: (c) OpenStreetMap contributors, ODbL.  Tree positions and heights:
+County of Los Angeles, LARIAC7 Tree Canopy Tops 2023 (used under the LARIAC
+terms of use; no endorsement by the County is implied).  Imagery source: {cfg['imagery']['source']}
 (NAIP imagery is public domain, courtesy USDA Farm Production and Conservation).
 """)
 

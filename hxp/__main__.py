@@ -22,6 +22,13 @@ def main(argv=None):
     if a.command in ("fetch", "fetch-osm", "all"):
         print("Fetching OpenStreetMap data ...")
         osm.fetch(cfg["area"], os.path.join(data, "osm.json"))
+        if cfg.get("trees", {}).get("enabled", True) and cfg["trees"].get("source", "lariac") == "lariac":
+            print("Fetching LA County LiDAR tree tops ...")
+            os.makedirs(os.path.join(data, "veg"), exist_ok=True)
+            try:
+                trees.fetch_lariac_trees(cfg["area"], os.path.join(data, "veg", "lariac_trees.json"))
+            except Exception as ex:  # noqa: BLE001 - fall back to image-based detection
+                print(f"  LARIAC tree tops unavailable ({ex}); trees will be detected from imagery")
     if a.command in ("fetch", "fetch-imagery", "all"):
         print("Fetching imagery ...")
         grid = imagery.Grid(cfg["area"], cfg["imagery"])

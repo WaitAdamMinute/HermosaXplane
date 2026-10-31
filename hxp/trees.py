@@ -24,6 +24,62 @@ from .imagery import _get
 
 VEG_ZOOM = 18
 
+LARIAC_TREES_URL = ("https://services.arcgis.com/RmCCgQtiZLDCtblq/arcgis/rest/services/"
+                    "Tree_Canopy_Tops_2023/FeatureServer/0/query")
+
+
+def fetch_lariac_trees(area, out_path, url=LARIAC_TREES_URL):
+    """LA County 2023 tree tops (LiDAR nDSM + 4-inch CIR NDVI): one point per tree
+    with height (m) and crown diameter (ft).  Saves a compact JSON list."""
+    import json
+    import urllib.request
+
+    trees, offset = [], 0
+    while True:
+        q = urllib.parse.urlencode({
+            "f": "json", "where": "1=1", "outFields": "Height_1,Diameter", "outSR": 4326,
+            "geometry": f"{area['west']},{area['south']},{area['east']},{area['north']}",
+            "geometryType": "esriGeometryEnvelope", "inSR": 4326,
+            "spatialRel": "esriSpatialRelIntersects", "orderByFields": "OBJECTID",
+            "resultOffset": offset, "resultRecordCount": 2000,
+        })
+        req = urllib.request.Request(f"{url}?{q}", headers={"User-Agent": "HermosaXplane/1.0"})
+        with urllib.request.urlopen(req, timeout=120) as r:
+            js = json.loads(r.read())
+        if "error" in js:
+            raise RuntimeError(js["error"])
+        feats = js.get("features", [])
+        for f in feats:
+            a, g = f["attributes"], f["geometry"]
+            trees.append([round(g["x"], 7), round(g["y"], 7), a.get("Height_1"), a.get("Diameter")])
+        offset += len(feats)
+        if not feats or not js.get("exceededTransferLimit"):
+            break
+    with open(out_path, "w") as f:
+        json.dump({"source": "LA County LARIAC7 Tree Canopy Tops 2023", "trees": trees}, f)
+    print(f"  {len(trees)} LARIAC tree tops -> {out_path}")
+    return len(trees)
+
+
+def lariac_crowns(path, frame, cfg):
+    """Crowns from the LARIAC tree-top points (heights in m, diameters in ft)."""
+    import json
+    with open(path) as f:
+        js = json.load(f)
+    out = []
+    for lon, lat, h, d in js["trees"]:
+        if h is None or d is None:
+            continue
+        h = float(h)
+        r = float(d) * 0.3048 / 2
+        if h < 1.5 or h > cfg.get("max_height", 32.0) or r <= 0:
+            continue
+        x, y = frame.to_xy(lon, lat)
+        out.append(dict(x=x, y=y, r=min(max(r, 0.8), cfg["max_crown_radius"]), h=h,
+                        raw_r=r, blob=math.pi * r * r, ndvi=None))
+    print(f"  trees: {len(out)} LiDAR tree tops (LARIAC 2023)")
+    return out
+
 
 class VegRaster:
     """NIR/R/G raster over the area at VEG_ZOOM (global pixel origin px0, py0)."""
@@ -203,6 +259,20 @@ def place(crowns, osm_tree_nodes, roads_geom, coast_geom, lib, cfg, frame, seed=
     for c in crowns:
         r = c["r"]
         pt = Point(c["x"], c["y"])
+        if c.get("h") is not None:
+            h, d = c["h"], 2 * c["raw_r"]
+            lon, lat = frame.to_ll(c["x"], c["y"])
+            # LiDAR shape: tall with a small crown = palm; slim + tall-ish = cypress
+            if h >= 8.0 and d <= max(5.5, 0.42 * h):
+                obj = lib.palm(h, rnd, "fan" if d < 4.5 else "date")
+            elif h >= 6.0 and d <= 0.22 * h:
+                obj = lib.cypress(h, rnd)
+            elif h < 2.6:
+                obj = lib.shrub(max(1.2, min(3.0, d)), rnd)
+            else:
+                obj = lib.broadleaf(h, min(r, h * 0.55), rnd)
+            out.append((obj, lon, lat, rnd.uniform(0, 360)))
+            continue
         streety = road_near is not None and road_near.contains(pt)
         beachy = coast_near is not None and coast_near.contains(pt)
         p_palm = cfg["palm_base"]
