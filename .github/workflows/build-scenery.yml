@@ -43,6 +43,17 @@ jobs:
         run: python -m hxp build
       - name: Render check image
         run: python tests/render_check.py build/zzz_Hermosa_Beach_Photoreal build/+33-119.txt build/render_check.jpg -118.3990 33.8620
+      - name: Render sim-style views
+        run: |
+          for p in pier downtown approach; do
+            python tests/render_view.py build/zzz_Hermosa_Beach_Photoreal build/+33-119.txt build/view_$p.jpg $p
+          done
+      - name: Push renders branch
+        run: |
+          mkdir -p /tmp/renders && cp build/view_*.jpg build/preview.jpg build/render_check.jpg /tmp/renders/
+          cd /tmp/renders && git init -q -b renders && git add .
+          git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com commit -qm "Renders from build ${{ github.run_number }} (${{ github.sha }})"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" renders
       - uses: actions/upload-artifact@v4
         with:
           name: zzz_Hermosa_Beach_Photoreal
@@ -54,6 +65,7 @@ jobs:
           path: |
             build/preview.jpg
             build/render_check.jpg
+            build/view_*.jpg
             build/+33-119.txt
       - name: Publish release
         if: github.event_name == 'workflow_dispatch'
