@@ -1,0 +1,66 @@
+name: Build scenery pack
+
+on:
+  workflow_dispatch:
+    inputs:
+      imagery_source:
+        description: "Imagery source (naip = public domain USDA NAIP)"
+        default: naip
+        type: choice
+        options: [naip, xyz]
+      zoom:
+        description: "Photo zoom level (18 ~0.5 m/px, 19 ~0.25 m/px)"
+        default: "18"
+  push:
+    branches: [main]
+    paths: ["hxp/**", "config.toml", ".github/workflows/build-scenery.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Apply workflow inputs
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          sed -i 's/^source = .*/source = "${{ inputs.imagery_source }}"/' config.toml
+          sed -i 's/^zoom = .*/zoom = ${{ inputs.zoom }}/' config.toml
+      - name: Fetch OpenStreetMap data
+        run: python -m hxp fetch-osm
+      - name: Fetch imagery
+        run: python -m hxp fetch-imagery
+      - name: Get DSFTool
+        run: python -m hxp tools
+      - name: Build pack
+        run: python -m hxp build
+      - name: Render check image
+        run: python tests/render_check.py build/zzz_Hermosa_Beach_Photoreal build/+33-119.txt build/render_check.jpg -118.3990 33.8620
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zzz_Hermosa_Beach_Photoreal
+          path: build/zzz_Hermosa_Beach_Photoreal
+          compression-level: 6
+      - uses: actions/upload-artifact@v4
+        with:
+          name: previews
+          path: |
+            build/preview.jpg
+            build/render_check.jpg
+            build/+33-119.txt
+      - name: Publish release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="build-${{ github.run_number }}"
+          gh release create "$tag" build/zzz_Hermosa_Beach_Photoreal.zip build/preview.jpg build/render_check.jpg \
+            --target "${{ github.sha }}" --title "Hermosa Beach scenery ($tag)" \
+            --notes "Unzip into X-Plane/Custom Scenery. Built from ${{ github.sha }} with imagery source ${{ inputs.imagery_source }}, zoom ${{ inputs.zoom }}."

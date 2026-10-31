@@ -1,0 +1,98 @@
+# Hermosa Beach photoreal scenery - build configuration
+#
+# All distances are metres unless stated otherwise.
+
+[pack]
+name = "Hermosa Beach Photoreal"
+# Folder name created inside build/ (copy it into X-Plane's "Custom Scenery").
+folder = "zzz_Hermosa_Beach_Photoreal"
+
+[area]
+# Bounding box of the scenery (decimal degrees, WGS84).  Covers the City of
+# Hermosa Beach from the Manhattan Beach line (north) to Herondo St (south),
+# including the beach, the surf zone and the full length of the pier.
+south = 33.8490
+north = 33.8760
+west  = -118.4140
+east  = -118.3740
+
+[imagery]
+# "naip"  - USDA NAIP aerial imagery (public domain, ~0.6 m/px) via the USGS
+#           National Map image service.  Safe to redistribute.
+# "xyz"   - any {z}/{x}/{y} tile server given in xyz_url (check the provider's
+#           licence: many forbid redistribution; for personal use only).
+source = "naip"
+naip_url = "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPPlus/ImageServer/exportImage"
+xyz_url = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+# Web-Mercator zoom level the photo grid is built at.  18 = ~0.50 m/px at this
+# latitude (matches NAIP).  19 = ~0.25 m/px (use with a high-res xyz source).
+zoom = 18
+# Texture size (px).  The bottom `wall_strip` rows of every photo texture are
+# reserved for the building wall atlas, so the photo part is
+# texture_size x (texture_size - wall_strip).
+texture_size = 4096
+wall_strip = 512
+# "dds" (DXT, mipmapped, recommended) or "png".
+texture_format = "dds"
+# X-Plane expects DDS data stored bottom-up.  Leave true unless photos appear
+# upside down in the sim.
+dds_flip = true
+# How far past the OSM coastline the photo is drawn fully opaque (covers the
+# surf zone and the pier), and the width of the fade to X-Plane's own water.
+sea_opaque = 650.0
+sea_fade = 250.0
+# Simple colour correction applied to the photo.
+brightness = 1.0
+contrast = 1.05
+saturation = 1.05
+
+[buildings]
+enabled = true
+# Used when OSM has neither height nor building:levels.
+default_height = 7.0
+level_height = 3.1
+min_area = 6.0
+# Walls are extended this far below ground (plus 12% of the footprint
+# diameter) so buildings on Hermosa's hillsides never float.
+basement = 2.0
+# Width of one window bay on the wall atlas.
+bay_width = 4.0
+lod_far = 7000.0
+
+[pier]
+enabled = true
+deck_height = 7.0
+deck_thickness = 0.9
+default_width = 7.0
+piling_spacing = 12.0
+
+[exclusions]
+# Remove default X-Plane scenery inside the area so it doesn't clash with the
+# photo: objects, facades, forests, lines, strings, draped polygons/autogen,
+# roads and beaches.
+objects = true
+facades = true
+forests = true
+lines = true
+strings = true
+polygons = true
+roads = true
+beaches = true
+
+[roads]
+# EXPERIMENTAL: add an OSM-derived 3D road network (traffic, street lights).
+# With this off, the roads you see are the ones in the (perfectly aligned)
+# photo, and the misaligned default roads are removed by the exclusion zone.
+# Turning it on requires filling `types` with road type numbers from your
+# X-Plane's roads.net (see README).
+enabled = false
+network = "lib/g10/roads.net"
+
+[roads.types]
+# OSM highway tag = roads.net subtype number, e.g.
+# primary = 0
+# residential = 0
+
+[tools]
+# Path to Laminar's DSFTool.  Leave empty to search tools/ and $PATH.
+dsftool = ""
