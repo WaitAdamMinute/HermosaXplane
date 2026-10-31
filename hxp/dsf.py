@@ -28,8 +28,12 @@ class DSFText:
         self.props.append((f"sim/exclude_{kind}", f"{w:.6f}/{s:.6f}/{e:.6f}/{n:.6f}"))
 
     def obj_def(self, path):
-        self.obj_defs.append(path)
-        return len(self.obj_defs) - 1
+        if not hasattr(self, "_obj_idx"):
+            self._obj_idx = {}
+        if path not in self._obj_idx:
+            self._obj_idx[path] = len(self.obj_defs)
+            self.obj_defs.append(path)
+        return self._obj_idx[path]
 
     def pol_def(self, path):
         self.pol_defs.append(path)

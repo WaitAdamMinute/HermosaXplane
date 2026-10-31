@@ -38,6 +38,9 @@ def overpass_query(area):
   way["man_made"="pier"]({bb});
   relation["man_made"="pier"]({bb});
   way["highway"]({bb});
+  node["natural"="tree"]({bb});
+  node["highway"="street_lamp"]({bb});
+  way["natural"="tree_row"]({bb});
 );
 out body;
 >;
@@ -97,12 +100,15 @@ class OSMData:
             js = json.load(f)
         self.frame = frame
         self.nodes = {}
+        self.node_tags = {}
         self.ways = {}
         self.rels = []
         for el in js["elements"]:
             t = el["type"]
             if t == "node":
                 self.nodes[el["id"]] = frame.to_xy(el["lon"], el["lat"])
+                if el.get("tags"):
+                    self.node_tags[el["id"]] = el["tags"]
             elif t == "way":
                 if el["id"] in self.ways and "tags" not in el:
                     continue  # skeleton duplicate of a tagged way
@@ -203,6 +209,9 @@ class OSMData:
             return []
         m = linemerge(lines)
         return list(m.geoms) if hasattr(m, "geoms") else [m]
+
+    def nodes_tagged(self, key, value):
+        return [(self.nodes[n], t) for n, t in self.node_tags.items() if t.get(key) == value]
 
     def highways(self):
         out = []

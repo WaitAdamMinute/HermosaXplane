@@ -57,8 +57,16 @@ def main(out):
                 coords = [(lon0, lat0), (lon0 + w, lat0), (lon0 + w, lat0 + h / 2), (lon0 + w / 2, lat0 + h / 2),
                           (lon0 + w / 2, lat0 + h), (lon0, lat0 + h)]
             way(coords, tags)
-    # a road
-    way([(coast_lon(33.86) + 0.0008, 33.85 + k * 0.001) for k in range(26)], {"highway": "residential"}, closed=False)
+    # roads: a coast-parallel avenue and some cross streets, plus a few OSM trees
+    way([(coast_lon(33.86) + 0.0008, 33.85 + k * 0.001) for k in range(26)], {"highway": "primary"}, closed=False)
+    for k in range(8):
+        la = 33.852 + k * 0.003
+        way([(coast_lon(la) + 0.0004, la), (a["east"] - 0.001, la)], {"highway": "residential"}, closed=False)
+    way([(coast_lon(33.8618) + 0.0001, 33.8622), (coast_lon(33.8618) + 0.0001, 33.8650)], {"highway": "pedestrian"}, closed=False)
+    for k in range(20):
+        nid[0] += 1
+        els.append({"type": "node", "id": nid[0], "lon": a["west"] + 0.02 + k * 0.0005, "lat": 33.865,
+                    "tags": {"natural": "tree", "genus": "Washingtonia" if k % 2 else "Quercus"}})
 
     os.makedirs(os.path.join(out, "data", "imagery"), exist_ok=True)
     json.dump({"elements": els}, open(os.path.join(out, "data", "osm.json"), "w"))
@@ -73,6 +81,21 @@ def main(out):
                 d.rectangle([0, py, x - c.px0, py + 8], fill=(30, 80, 110))
         for k in range(0, grid.chunk_w, 256):
             d.line([(k, 0), (k, grid.chunk_h)], fill=(90, 90, 90), width=6)
+        # lawns (smooth bright green) and tree crowns (dark, textured)
+        trnd = random.Random(c.i * 7 + c.j)
+        s_zoom = 2 ** (grid.zoom - 18)
+        for _ in range(25):
+            x, y = trnd.uniform(0, grid.chunk_w), trnd.uniform(0, grid.chunk_h)
+            d.rectangle([x, y, x + 60 * s_zoom, y + 40 * s_zoom], fill=(120, 165, 80))
+        for _ in range(900):
+            x, y = trnd.uniform(0, grid.chunk_w), trnd.uniform(0, grid.chunk_h)
+            r = trnd.uniform(2.5, 9) * s_zoom
+            for k in range(14):
+                ox, oy = trnd.uniform(-r, r) * 0.6, trnd.uniform(-r, r) * 0.6
+                rr = r * trnd.uniform(0.3, 0.6)
+                shade = trnd.uniform(0.5, 1.1)
+                d.ellipse([x + ox - rr, y + oy - rr, x + ox + rr, y + oy + rr],
+                          fill=(int(45 * shade), int(85 * shade), int(38 * shade)))
         im.save(os.path.join(out, "data", "imagery", c.name + ".jpg"), quality=90)
     print(f"synthetic data in {out}: {len(els)} elements, {len(grid.chunks)} chunks")
 

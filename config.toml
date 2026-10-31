@@ -17,12 +17,18 @@ west  = -118.4140
 east  = -118.3740
 
 [imagery]
-# "naip"  - USDA NAIP aerial imagery (public domain, ~0.6 m/px) via the USGS
-#           National Map image service.  Safe to redistribute.
-# "xyz"   - any {z}/{x}/{y} tile server given in xyz_url (check the provider's
-#           licence: many forbid redistribution; for personal use only).
+# "naip"   - USDA NAIP aerial imagery (public domain, ~0.6 m/px) via the USGS
+#            National Map image service.  Safe to redistribute.
+# "arcgis" - any ArcGIS ImageServer .../exportImage or MapServer .../export
+#            endpoint given in arcgis_url (e.g. LA County's LARIAC 4-inch
+#            orthophotos; use zoom = 20 for those).
+# "xyz"    - any {z}/{x}/{y} tile server given in xyz_url (check the provider's
+#            licence: many forbid redistribution; for personal use only).
 source = "naip"
 naip_url = "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPPlus/ImageServer/exportImage"
+arcgis_url = ""
+# Largest image the arcgis server will return per request (px).
+arcgis_max_px = 2048
 xyz_url = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
 # Web-Mercator zoom level the photo grid is built at.  18 = ~0.50 m/px at this
 # latitude (matches NAIP).  19 = ~0.25 m/px (use with a high-res xyz source).
@@ -79,19 +85,49 @@ polygons = true
 roads = true
 beaches = true
 
-[roads]
-# EXPERIMENTAL: add an OSM-derived 3D road network (traffic, street lights).
-# With this off, the roads you see are the ones in the (perfectly aligned)
-# photo, and the misaligned default roads are removed by the exclusion zone.
-# Turning it on requires filling `types` with road type numbers from your
-# X-Plane's roads.net (see README).
-enabled = false
+[trees]
+enabled = true
+# NDVI threshold for vegetation ("auto" adapts to the image).
+ndvi_threshold = "auto"
+# Vegetation pixels whose local texture is above this percentile (or that are
+# darker than average) are tree canopy rather than lawn.
+texture_percentile = 40
+min_crown_area = 3.0
+min_crown_radius = 1.0
+max_crown_radius = 6.5
+# Baseline chance that a crown is a palm; raised for small isolated crowns
+# along streets and near the beach.
+palm_base = 0.12
+
+[lights]
+# Street lights along the OSM roads (real lamp positions are used instead if
+# OSM has them), decorative lamps on pedestrian ways and along the pier.
+enabled = true
+
+[traffic]
+# EXPERIMENTAL: a second, optional pack that lays X-Plane's own road network
+# (moving cars, X-Plane street lights) on every OSM road in the area.  Road
+# type numbers below are the "virtual road types" from Laminar's road
+# generator (xptools gen_roads10: city / dry / sidewalks both sides).  They
+# could not be checked against an X-Plane 12 install - if roads render wrong,
+# delete the traffic pack and adjust these.
+enabled = true
+folder = "zzz_Hermosa_Beach_0_Traffic"
 network = "lib/g10/roads.net"
 
-[roads.types]
-# OSM highway tag = roads.net subtype number, e.g.
-# primary = 0
-# residential = 0
+[traffic.types]
+motorway = 161
+trunk = 24
+primary = 24
+primary_oneway = 44
+secondary = 64
+secondary_oneway = 84
+tertiary = 64
+tertiary_oneway = 84
+residential = 104
+residential_oneway = 124
+unclassified = 104
+living_street = 104
 
 [tools]
 # Path to Laminar's DSFTool.  Leave empty to search tools/ and $PATH.

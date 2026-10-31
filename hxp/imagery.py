@@ -89,16 +89,16 @@ def _get(url, tries=4):
     raise RuntimeError(f"download failed: {url}: {last}")
 
 
-def _fetch_naip(chunk, cfg, cache):
-    """NAIP via the ArcGIS ImageServer exportImage endpoint, in 2048 px pieces."""
+def _fetch_arcgis(chunk, url, cache, tag, piece=2048):
+    """Any ArcGIS ImageServer (.../exportImage) or MapServer (.../export) endpoint."""
     g = chunk.grid
     out = Image.new("RGB", (g.chunk_w, g.chunk_h))
-    step = 2048
+    step = piece
     for oy in range(0, g.chunk_h, step):
         for ox in range(0, g.chunk_w, step):
             w = min(step, g.chunk_w - ox)
             h = min(step, g.chunk_h - oy)
-            fn = os.path.join(cache, f"naip_z{g.zoom}_{chunk.px0 + ox}_{chunk.py0 + oy}_{w}x{h}.jpg")
+            fn = os.path.join(cache, f"{tag}_z{g.zoom}_{chunk.px0 + ox}_{chunk.py0 + oy}_{w}x{h}.jpg")
             if not os.path.exists(fn):
                 xmin, ymax = px_to_merc_m(chunk.px0 + ox, chunk.py0 + oy, g.zoom)
                 xmax, ymin = px_to_merc_m(chunk.px0 + ox + w, chunk.py0 + oy + h, g.zoom)
@@ -108,7 +108,7 @@ def _fetch_naip(chunk, cfg, cache):
                     "format": "jpg", "compressionQuality": 92,
                     "interpolation": "RSP_BilinearInterpolation", "f": "image",
                 })
-                data = _get(f"{cfg['naip_url']}?{q}")
+                data = _get(f"{url}?{q}")
                 with open(fn, "wb") as f:
                     f.write(data)
             im = Image.open(fn).convert("RGB")
@@ -148,7 +148,12 @@ def fetch(grid, cfg, out_dir, cache_dir):
             print(f"  {c.name}: cached")
             continue
         print(f"  {c.name}: downloading ({src}) bounds={tuple(round(v, 5) for v in c.lonlat_bounds())}")
-        im = _fetch_naip(c, cfg, cache_dir) if src == "naip" else _fetch_xyz(c, cfg, cache_dir)
+        if src == "naip":
+            im = _fetch_arcgis(c, cfg["naip_url"], cache_dir, "naip")
+        elif src == "arcgis":
+            im = _fetch_arcgis(c, cfg["arcgis_url"], cache_dir, "arcgis", int(cfg.get("arcgis_max_px", 2048)))
+        else:
+            im = _fetch_xyz(c, cfg, cache_dir)
         im.save(dst, quality=95)
 
 

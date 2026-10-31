@@ -4,7 +4,7 @@ import os
 import sys
 import tomllib
 
-from . import dsf, imagery, osm
+from . import dsf, imagery, osm, trees
 
 
 def main(argv=None):
@@ -26,6 +26,14 @@ def main(argv=None):
         print("Fetching imagery ...")
         grid = imagery.Grid(cfg["area"], cfg["imagery"])
         imagery.fetch(grid, cfg["imagery"], os.path.join(data, "imagery"), os.path.join(data, "cache"))
+        if cfg.get("trees", {}).get("enabled", True):
+            print("Fetching NAIP near-infrared for tree detection ...")
+            os.makedirs(os.path.join(data, "veg"), exist_ok=True)
+            try:
+                trees.fetch_nir(cfg["area"], cfg["imagery"]["naip_url"], os.path.join(data, "veg", "nrg.jpg"),
+                                os.path.join(data, "cache"))
+            except Exception as ex:  # noqa: BLE001 - fall back to RGB index at build time
+                print(f"  NIR download failed ({ex}); the build will use an RGB vegetation index")
     if a.command in ("tools", "all"):
         tools = os.path.join(root, "tools")
         if not dsf.find_dsftool(cfg["tools"].get("dsftool"), tools):

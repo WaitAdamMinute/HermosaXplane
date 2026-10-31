@@ -6,14 +6,18 @@ import zipfile
 
 from PIL import Image, ImageDraw
 from shapely.geometry import Point, box
+from shapely.ops import unary_union
 from shapely.prepared import prep
 
 from . import buildings as B
+from . import lights as L
 from . import ortho
+from . import trees as T
 from .dsf import DSFText, compile_dsf, find_dsftool
 from .geo import LocalFrame, merc_px, tile_name
 from .imagery import Grid, load_chunk_image
 from .osm import OSMData, land_polygon
+from .props import PropLibrary, paint_atlas
 from .textures import WallAtlas, make_lit_texture, save_texture
 
 EXCL_KEYS = {"objects": "obj", "facades": "fac", "forests": "for", "lines": "lin",
@@ -78,7 +82,7 @@ def build(cfg, root):
         mask = ortho.alpha_mask(c, frame, land, icfg)
         tex = ortho.compose_texture(photo, mask, base, c)
         save_texture(tex, os.path.join(tex_dir, c.name), fmt, alpha=True, flip=flip)
-        preview_parts.append((c, photo))
+        preview_parts.append((c, photo.resize((max(1, photo.size[0] // 4), max(1, photo.size[1] // 4)))))
         polys = ortho.draped_polygons(c, frame, coverage)
         if not polys:
             continue
@@ -113,10 +117,40 @@ def build(cfg, root):
             for name, lon, lat in placed:
                 dsf.obj(dsf.obj_def(f"objects/pier/{name}"), lon, lat)
 
-    # ---------------------------------------------------------------- roads
-    rcfg = cfg.get("roads", {})
-    if rcfg.get("enabled") and rcfg.get("types"):
-        add_roads(dsf, osm, frame, area_poly, rcfg)
+    # ---------------------------------------------------- trees and lights
+    lib = PropLibrary(pack, "../../textures", ext)
+    building_polys = [p for _, _, p in osm.buildings()]
+    pier_polys = [p for _, _, p in osm.piers(cfg["pier"]["default_width"]) if inside.intersects(p)]
+    tcfg = cfg.get("trees", {})
+    n_trees = 0
+    if tcfg.get("enabled", True):
+        print("Trees ...")
+        veg_dir = os.path.join(data_dir, "veg")
+        os.makedirs(veg_dir, exist_ok=True)
+        nrg = os.path.join(veg_dir, "nrg.jpg")
+        if not os.path.exists(nrg):
+            print("  no NAIP infrared mosaic - using RGB vegetation index from the photo")
+            nrg = os.path.join(veg_dir, "rgb_veg.jpg")
+            T.rgb_fallback(grid, img_dir, area, nrg)
+        crowns = T.detect(nrg, area, frame, building_polys + pier_polys, land, tcfg)
+        roads_geom = L.roads_union(osm, area_poly)
+        coast_geom = unary_union(coast) if coast else None
+        placed_t = T.place(crowns, T.osm_trees(osm), roads_geom, coast_geom, lib, tcfg, frame)
+        for obj, lon, lat, hd in placed_t:
+            dsf.obj(dsf.obj_def(obj), lon, lat, hd)
+        n_trees = len(placed_t)
+    n_lights = 0
+    if cfg.get("lights", {}).get("enabled", True):
+        print("Street lights ...")
+        placed_l = L.place(osm, area_poly, building_polys, lib, frame, pier_polys, cfg["pier"])
+        for obj, lon, lat, hd in placed_l:
+            dsf.obj(dsf.obj_def(obj), lon, lat, hd)
+        n_lights = len(placed_l)
+    if lib.written:
+        print(f"  {len(lib.written)} prop models; writing prop textures ...")
+        pim, plit = paint_atlas()
+        save_texture(pim, os.path.join(tex_dir, "props"), fmt, alpha=True, flip=flip)
+        save_texture(plit, os.path.join(tex_dir, "props_LIT"), fmt, alpha=False, flip=flip)
 
     # ------------------------------------------------------------------ DSF
     txt_path = os.path.join(out_root, f"{tile}.txt")
@@ -131,15 +165,35 @@ def build(cfg, root):
         print("!! DSFTool not found - DSF text written to", txt_path)
         print("!! run:  python -m hxp tools   (or set [tools] dsftool) and then build again")
 
+    packs = [pack]
+    rcfg = cfg.get("traffic", {})
+    if rcfg.get("enabled") and rcfg.get("types"):
+        print("Traffic network pack ...")
+        tpack = os.path.join(out_root, rcfg["folder"])
+        if os.path.exists(tpack):
+            shutil.rmtree(tpack)
+        tdsf = DSFText(math.floor(lon_c), math.floor(lat_c))
+        add_roads(tdsf, osm, frame, area_poly, rcfg)
+        ttxt = os.path.join(out_root, f"{tile}_traffic.txt")
+        with open(ttxt, "w", newline="\n") as f:
+            f.write(tdsf.text())
+        if tool:
+            compile_dsf(tool, ttxt, os.path.join(tpack, "Earth nav data", tile_dir, f"{tile}.dsf"))
+        os.makedirs(tpack, exist_ok=True)
+        with open(os.path.join(tpack, "README.txt"), "w", newline="\n") as f:
+            f.write(TRAFFIC_README)
+        packs.append(tpack)
+
     write_preview(preview_parts, grid, osm, frame, area_poly, coverage, os.path.join(out_root, "preview.jpg"))
-    write_pack_readme(pack, cfg, len(placed_b), grid)
+    write_pack_readme(pack, cfg, len(placed_b), grid, n_trees, n_lights)
     if tool:
         zpath = os.path.join(out_root, cfg["pack"]["folder"] + ".zip")
-        with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
-            for r, _, files in os.walk(pack):
-                for fn in files:
-                    p = os.path.join(r, fn)
-                    z.write(p, os.path.relpath(p, out_root))
+        with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED, allowZip64=True) as z:
+            for pk in packs:
+                for r, _, files in os.walk(pk):
+                    for fn in files:
+                        p = os.path.join(r, fn)
+                        z.write(p, os.path.relpath(p, out_root))
         print(f"Done: {pack}\n      {zpath}")
     return pack
 
@@ -151,10 +205,17 @@ def add_roads(dsf, osm, frame, area_poly, rcfg):
     use = {}
     ways = []
     for wid, tags, nodes in osm.highways():
-        t = types.get(tags["highway"])
+        hw = tags["highway"].replace("_link", "")
+        if hw == "service" and tags.get("service") in ("alley", "parking_aisle", "driveway"):
+            continue
+        oneway = tags.get("oneway") in ("yes", "1", "-1", "true") or tags.get("junction") == "roundabout"
+        t = types.get(f"{hw}_oneway") if oneway else None
+        t = t if t is not None else types.get(hw)
         if t is None:
             continue
         nodes = [n for n in nodes if n in osm.nodes]
+        if tags.get("oneway") == "-1":
+            nodes = nodes[::-1]
         if len(nodes) >= 2:
             ways.append((t, nodes))
             for n in nodes:
@@ -223,7 +284,7 @@ def write_preview(parts, grid, osm, frame, area_poly, coverage, path):
     print(f"  preview: {path}")
 
 
-def write_pack_readme(pack, cfg, n_buildings, grid):
+def write_pack_readme(pack, cfg, n_buildings, grid, n_trees=0, n_lights=0):
     with open(os.path.join(pack, "README.txt"), "w", newline="\n") as f:
         f.write(f"""{cfg['pack']['name']}
 {'=' * len(cfg['pack']['name'])}
@@ -234,6 +295,9 @@ Photoreal overlay scenery for Hermosa Beach, California (X-Plane 11 / 12).
   ({grid.nx * grid.ny} textures at Web-Mercator zoom {grid.zoom}).
 * {n_buildings} buildings extruded from real footprints and heights
   (OpenStreetMap / LA County LARIAC), roofs textured from the photo.
+* {n_trees} 3D trees (palms, broadleaf, cypress, shrubs) placed on the
+  tree crowns detected in the aerial imagery.
+* {n_lights} street and pier lights that glow at night.
 * Default autogen, roads, beaches, forests and objects are excluded inside
   the area so nothing misaligned is drawn on top of the photo.
 
@@ -244,3 +308,20 @@ Custom Scenery/scenery_packs.ini (new packs are added at the top).
 Data: (c) OpenStreetMap contributors, ODbL.  Imagery source: {cfg['imagery']['source']}
 (NAIP imagery is public domain, courtesy USDA Farm Production and Conservation).
 """)
+
+
+TRAFFIC_README = """Hermosa Beach traffic network (optional, experimental)
+=======================================================
+
+Adds X-Plane's own road network (moving cars, X-Plane street lights) along
+every OpenStreetMap road in Hermosa Beach, aligned with the photo.
+
+Install next to zzz_Hermosa_Beach_Photoreal.  In Custom Scenery/scenery_packs.ini
+this pack must be listed ABOVE zzz_Hermosa_Beach_Photoreal (the photo pack
+removes the default, misaligned roads from packs below it).
+
+If roads look wrong (wrong widths, rails or power lines instead of streets),
+delete this folder: the road type numbers it uses could not be verified
+against your X-Plane version.  Report it and they can be re-mapped in
+config.toml [traffic.types].
+"""
