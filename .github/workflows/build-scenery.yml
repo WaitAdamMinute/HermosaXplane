@@ -21,7 +21,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -45,7 +45,7 @@ jobs:
         run: python tests/render_check.py build/zzz_Hermosa_Beach_Photoreal build/+33-119.txt build/render_check.jpg -118.3990 33.8620
       - name: Render sim-style views
         run: |
-          for p in pier downtown approach; do
+          for p in pier downtown approach street night; do
             python tests/render_view.py build/zzz_Hermosa_Beach_Photoreal build/+33-119.txt build/view_$p.jpg $p
           done
       - name: Push renders branch

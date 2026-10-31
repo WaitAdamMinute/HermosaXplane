@@ -8,7 +8,10 @@ It replaces the default, misaligned scenery with:
 | **Aerial photo ground** | USDA NAIP imagery (public domain, ~0.6 m) is draped over the whole city, the beach, the surf zone and the pier. It fades into X-Plane's own water about 650–900 m offshore. |
 | **Roads and beach aligned to the photo** | Exclusion zones remove X-Plane's default roads, beaches, autogen, forests and objects inside the area. The roads and sand you see are the ones in the photo, so they line up exactly. |
 | **3D buildings that match reality** | Every building is extruded from its real footprint and real height. In Hermosa Beach these come from the LA County LARIAC building import in OpenStreetMap: outlines traced from 4-inch aerial imagery, heights from LiDAR. Roofs are textured with the aerial photo itself. Walls use a generated stucco/storefront/glass atlas with lit windows at night. |
-| **Hermosa Beach Pier** | Built in 3D from its OSM outline: a photo-textured deck on concrete pilings. |
+| **Hermosa Beach Pier** | Built in 3D from its OSM outline: a photo-textured deck on concrete pilings, with lamps along both rails. |
+| **Trees** | Every tree crown visible in the aerial imagery is detected from NAIP's near-infrared band (NDVI plus crown texture, so lawns aren't mistaken for trees) and gets a 3D tree sized to the crown. Small isolated crowns along streets and near the beach become palms (Mexican fan or Canary date palms); larger crowns become broadleaf trees; plus cypress and shrubs. Trees mapped in OSM with a genus are added too. |
+| **Street lights** | Cobra-head lights along every road (staggered or both sides depending on road class), acorn lamps on pedestrian ways and the pier. They glow at night. If OSM has real lamp positions, those are used instead. |
+| **Traffic (optional pack)** | `zzz_Hermosa_Beach_0_Traffic` lays X-Plane's own road network (moving cars, X-Plane street lighting) on every OSM street. **Experimental:** the road type numbers come from Laminar's road generator source and couldn't be checked in X-Plane 12. If roads look wrong, delete that folder. |
 
 ![Pier and downtown](docs/view_pier.jpg)
 
@@ -69,7 +72,7 @@ Each building is its own object, placed at its centroid. X-Plane then sets it on
 
 ## Tuning (`config.toml`)
 
-* **Higher-res photo:** set `zoom = 19`, `source = "xyz"` and an `xyz_url`. The default URL is Esri World Imagery. Check the provider's licence: most forbid redistribution, so keep such builds for personal use. NAIP is public domain.
+* **Higher-res photo:** set `source = "arcgis"`, `arcgis_url` to an ArcGIS `.../ImageServer/exportImage` (or `.../MapServer/export`) endpoint, and `zoom = 20` (~0.12 m/px). LA County's LARIAC 4-inch orthophotos are the best source for Hermosa Beach. Or set `zoom = 19`, `source = "xyz"` and an `xyz_url`. The default URL is Esri World Imagery. Check the provider's licence: most forbid redistribution, so keep such builds for personal use. NAIP is public domain.
 * **Photos upside down in the sim?** Set `dds_flip = false`, or use `texture_format = "png"`.
 * **Too much photo over the ocean?** Lower `sea_opaque` / `sea_fade`.
 * **3D road network with traffic and streetlights (experimental):** set `[roads] enabled = true` and map OSM `highway` values to road type numbers from your X-Plane's `Resources/default scenery/1000 roads/roads.net`.
