@@ -22,7 +22,7 @@ def main(argv=None):
     if a.command in ("fetch", "fetch-osm", "all"):
         print("Fetching OpenStreetMap data ...")
         osm.fetch(cfg["area"], os.path.join(data, "osm.json"))
-        if cfg.get("trees", {}).get("enabled", True) and cfg["trees"].get("source", "lariac") == "lariac":
+        if cfg.get("trees", {}).get("enabled", True) and cfg["trees"].get("tree_source", "lariac") == "lariac":
             print("Fetching LA County LiDAR tree tops ...")
             os.makedirs(os.path.join(data, "veg"), exist_ok=True)
             try:

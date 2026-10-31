@@ -90,7 +90,7 @@ enabled = true
 # "lariac" - LA County's 2023 tree tops (LiDAR heights + 4-inch NDVI), one
 #            point per real tree; falls back to "imagery" if unavailable.
 # "imagery" - detect crowns from NAIP near-infrared in this pipeline.
-source = "lariac"
+tree_source = "lariac"
 max_height = 32.0
 # NDVI threshold for vegetation ("auto" adapts to the image).
 ndvi_threshold = "auto"

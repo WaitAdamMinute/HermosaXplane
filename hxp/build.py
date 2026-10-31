@@ -128,7 +128,7 @@ def build(cfg, root):
         veg_dir = os.path.join(data_dir, "veg")
         os.makedirs(veg_dir, exist_ok=True)
         lariac = os.path.join(veg_dir, "lariac_trees.json")
-        if tcfg.get("source", "lariac") == "lariac" and os.path.exists(lariac):
+        if tcfg.get("tree_source", "lariac") == "lariac" and os.path.exists(lariac):
             crowns = T.lariac_crowns(lariac, frame, tcfg)
         else:
             nrg = os.path.join(veg_dir, "nrg.jpg")
