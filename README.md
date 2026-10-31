@@ -10,6 +10,14 @@ It replaces the default, misaligned scenery with:
 | **3D buildings that match reality** | Every building is extruded from its real footprint and real height. In Hermosa Beach these come from the LA County LARIAC building import in OpenStreetMap: outlines traced from 4-inch aerial imagery, heights from LiDAR. Roofs are textured with the aerial photo itself. Walls use a generated stucco/storefront/glass atlas with lit windows at night. |
 | **Hermosa Beach Pier** | Built in 3D from its OSM outline: a photo-textured deck on concrete pilings. |
 
+![Pier and downtown](docs/view_pier.jpg)
+
+| | |
+|---|---|
+| ![Approach from the ocean](docs/view_approach.jpg) | ![Pier Ave / downtown](docs/view_downtown.jpg) |
+
+*These are software renders of the real built pack, from `tests/render_view.py` (flat terrain, no shadows). They approximate the in-sim look and are not X-Plane screenshots.*
+
 Coverage: 33.849°N–33.876°N, 118.414°W–118.374°W (Manhattan Beach line to Herondo St, Strand to PCH and beyond). You can change this in [`config.toml`](config.toml).
 
 ## Getting the pack
