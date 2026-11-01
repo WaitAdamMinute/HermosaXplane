@@ -44,7 +44,7 @@ class DSFText:
         return len(self.net_defs) - 1
 
     def obj(self, idx, lon, lat, heading=0.0):
-        self.body.append(f"OBJECT {idx} {lon:.9f} {lat:.9f} {heading:.3f}")
+        self.body.append(f"OBJECT {idx} {lon:.9f} {lat:.9f} {heading % 360.0:.3f}")
 
     def polygon_uv(self, idx, windings):
         """Draped polygon with explicit texture coordinates (param 65535)."""
