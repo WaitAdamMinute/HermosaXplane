@@ -138,6 +138,62 @@ def _fetch_xyz(chunk, cfg, cache):
     return out
 
 
+def _files_list(cfg):
+    import glob
+    d = cfg.get("files_dir") or "data/lariac"
+    out = []
+    for ext in ("*.tif", "*.tiff", "*.TIF", "*.jp2", "*.JP2", "*.img", "*.vrt"):
+        out += glob.glob(os.path.join(d, "**", ext), recursive=True)
+    return sorted(set(out))
+
+
+def _from_files(chunk, cfg, _index={}):
+    """Reproject local orthophoto tiles (any CRS: e.g. LARIAC GeoTIFF / JPEG 2000
+    in CA State Plane V feet) onto this chunk's Web-Mercator pixel grid."""
+    import numpy as np
+    import rasterio
+    from rasterio.transform import from_bounds
+    from rasterio.warp import Resampling, reproject, transform_bounds
+
+    files = _files_list(cfg)
+    if not files:
+        raise RuntimeError(f"no imagery tiles found in {cfg.get('files_dir') or 'data/lariac'}")
+    if "bounds" not in _index:
+        _index["bounds"] = {}
+        for fn in files:
+            with rasterio.open(fn) as src:
+                if src.crs is None:
+                    raise RuntimeError(f"{fn} has no coordinate system (missing .prj / world file?)")
+                _index["bounds"][fn] = transform_bounds(src.crs, "EPSG:3857", *src.bounds)
+    g = chunk.grid
+    xmin, ymax = px_to_merc_m(chunk.px0, chunk.py0, g.zoom)
+    xmax, ymin = px_to_merc_m(chunk.px1, chunk.py1, g.zoom)
+    dst_t = from_bounds(xmin, ymin, xmax, ymax, g.chunk_w, g.chunk_h)
+    out = np.zeros((3, g.chunk_h, g.chunk_w), np.uint8)
+    have = np.zeros((g.chunk_h, g.chunk_w), bool)
+    n = 0
+    for fn, (bx0, by0, bx1, by1) in _index["bounds"].items():
+        if bx1 < xmin or bx0 > xmax or by1 < ymin or by0 > ymax:
+            continue
+        with rasterio.open(fn) as src:
+            tmp = np.zeros((3, g.chunk_h, g.chunk_w), np.uint8)
+            bands = [1, 2, 3] if src.count >= 3 else [1, 1, 1]
+            for k, b in enumerate(bands):
+                reproject(rasterio.band(src, b), tmp[k], dst_transform=dst_t, dst_crs="EPSG:3857",
+                          src_nodata=src.nodata, dst_nodata=0, resampling=Resampling.lanczos)
+            m = (tmp.max(0) > 0) & ~have
+            out[:, m] = tmp[:, m]
+            have |= m
+            n += 1
+    cov = have.mean()
+    print(f"    {n} source tiles, {cov * 100:.1f}% covered")
+    if cov < 0.999 and cfg.get("files_fill", "naip") == "naip":
+        fill = _fetch_arcgis(chunk, cfg["naip_url"], cfg["_cache"], "naip")
+        a = np.asarray(fill).transpose(2, 0, 1)
+        out[:, ~have] = a[:, ~have]
+    return Image.fromarray(out.transpose(1, 2, 0))
+
+
 def fetch(grid, cfg, out_dir, cache_dir):
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(cache_dir, exist_ok=True)
@@ -150,6 +206,8 @@ def fetch(grid, cfg, out_dir, cache_dir):
         print(f"  {c.name}: downloading ({src}) bounds={tuple(round(v, 5) for v in c.lonlat_bounds())}")
         if src == "naip":
             im = _fetch_arcgis(c, cfg["naip_url"], cache_dir, "naip")
+        elif src == "files":
+            im = _from_files(c, dict(cfg, _cache=cache_dir))
         elif src == "arcgis":
             im = _fetch_arcgis(c, cfg["arcgis_url"], cache_dir, "arcgis", int(cfg.get("arcgis_max_px", 2048)))
         else:

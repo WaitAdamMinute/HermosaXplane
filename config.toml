@@ -22,11 +22,15 @@ east  = -118.3740
 # "arcgis" - any ArcGIS ImageServer .../exportImage or MapServer .../export
 #            endpoint given in arcgis_url (e.g. LA County's LARIAC 4-inch
 #            orthophotos; use zoom = 20 for those).
+# "files"  - local orthophoto tiles (GeoTIFF / JPEG 2000, any projection) in
+#            files_dir, e.g. LA County LARIAC 4-inch tiles; use zoom = 20.
+#            Gaps outside the tiles are filled with NAIP.
 # "xyz"    - any {z}/{x}/{y} tile server given in xyz_url (check the provider's
 #            licence: many forbid redistribution; for personal use only).
 source = "naip"
 naip_url = "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPPlus/ImageServer/exportImage"
 arcgis_url = ""
+files_dir = "data/lariac"
 # Largest image the arcgis server will return per request (px).
 arcgis_max_px = 2048
 xyz_url = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
