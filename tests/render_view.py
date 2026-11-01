@@ -24,6 +24,8 @@ PRESETS = {
     "downtown": dict(target=(-118.3975, 33.8625), cam=(-330.0, 120.0, 260.0), fov=60),
     "approach": dict(target=(-118.3940, 33.8620), cam=(-1500.0, 520.0, -900.0), fov=55),
     "street": dict(target=(-118.3955, 33.8622), cam=(-120.0, 28.0, -95.0), fov=65),
+    "houses": dict(target=(-118.3930, 33.8660), cam=(-75.0, 32.0, -90.0), fov=62),
+    "beach": dict(target=(-118.3994, 33.8600), cam=(-110.0, 18.0, -80.0), fov=64),
     "night": dict(target=(-118.3975, 33.8625), cam=(-330.0, 120.0, 260.0), fov=60, night=True),
 }
 

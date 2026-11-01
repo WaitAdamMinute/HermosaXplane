@@ -39,6 +39,10 @@ def overpass_query(area):
   relation["man_made"="pier"]({bb});
   way["highway"]({bb});
   node["natural"="tree"]({bb});
+  nwr["sport"~"volleyball"]({bb});
+  nwr["emergency"~"lifeguard"]({bb});
+  nwr["tower:type"="lifeguard"]({bb});
+  nwr["lifeguard"]({bb});
   node["highway"="street_lamp"]({bb});
   way["natural"="tree_row"]({bb});
 );
@@ -209,6 +213,16 @@ class OSMData:
             return []
         m = linemerge(lines)
         return list(m.geoms) if hasattr(m, "geoms") else [m]
+
+    def alleys(self):
+        out = []
+        for w in self.ways.values():
+            t = w.get("tags", {})
+            if t.get("highway") == "service" and t.get("service") in ("alley", "driveway"):
+                c = self.way_coords(w)
+                if len(c) >= 2:
+                    out.append(LineString(c))
+        return out
 
     def nodes_tagged(self, key, value):
         return [(self.nodes[n], t) for n, t in self.node_tags.items() if t.get(key) == value]

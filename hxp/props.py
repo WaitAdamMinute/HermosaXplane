@@ -24,6 +24,9 @@ REGIONS = {
     "palm_bark": (0, 1024, 128, 1024), "bark": (128, 1024, 128, 1024),
     "metal": (256, 1024, 128, 128), "lens": (384, 1024, 128, 128),
     "shrub": (512, 1024, 512, 512),
+    "net": (1024, 1024, 512, 128), "tower_wall": (1024, 1152, 256, 256),
+    "tower_white": (1280, 1152, 128, 128), "tower_ramp": (1408, 1152, 128, 128),
+    "sign_red": (1536, 1024, 128, 64),
 }
 
 
@@ -129,6 +132,38 @@ def paint_atlas(seed=11):
         im.paste(_bark(w, h, rng, palm), (x, y))
     x, y, w, h = REGIONS["metal"]
     im.paste(Image.new("RGBA", (w, h), (118, 122, 126, 255)), (x, y))
+    # volleyball net: white top band, black mesh, transparent holes
+    x, y, w, h = REGIONS["net"]
+    net = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    dn = ImageDraw.Draw(net)
+    for k in range(0, w, 6):
+        dn.line([(k, 0), (k, h)], fill=(20, 20, 20, 255), width=1)
+    for k in range(0, h, 6):
+        dn.line([(0, k), (w, k)], fill=(20, 20, 20, 255), width=1)
+    dn.rectangle([0, 0, w, 10], fill=(245, 245, 245, 255))
+    dn.rectangle([0, h - 5, w, h], fill=(245, 245, 245, 255))
+    im.paste(net, (x, y))
+    # LA County lifeguard tower: pale blue boards with a band of windows
+    x, y, w, h = REGIONS["tower_wall"]
+    tw = Image.new("RGBA", (w, h), (150, 196, 222, 255))
+    dt = ImageDraw.Draw(tw)
+    for k in range(0, h, 12):
+        dt.line([(0, k), (w, k)], fill=(128, 172, 200, 255), width=2)
+    dt.rectangle([10, 40, w - 10, 150], fill=(246, 246, 244, 255))
+    dt.rectangle([16, 46, w - 16, 144], fill=(48, 62, 74, 255))
+    for k in range(16, w - 16, 56):
+        dt.line([(k, 46), (k, 144)], fill=(246, 246, 244, 255), width=6)
+    im.paste(tw, (x, y))
+    x, y, w, h = REGIONS["tower_white"]
+    im.paste(Image.new("RGBA", (w, h), (244, 244, 240, 255)), (x, y))
+    x, y, w, h = REGIONS["tower_ramp"]
+    rp = Image.new("RGBA", (w, h), (176, 150, 116, 255))
+    dr = ImageDraw.Draw(rp)
+    for k in range(0, h, 10):
+        dr.line([(0, k), (w, k)], fill=(140, 116, 88, 255), width=2)
+    im.paste(rp, (x, y))
+    x, y, w, h = REGIONS["sign_red"]
+    im.paste(Image.new("RGBA", (w, h), (196, 40, 36, 255)), (x, y))
     x, y, w, h = REGIONS["lens"]
     im.paste(Image.new("RGBA", (w, h), (226, 222, 205, 255)), (x, y))
     lit.paste(Image.new("RGB", (w, h), (255, 196, 120)), (x, y))
@@ -313,6 +348,43 @@ def _box(m, a, b, uvname):
     m.quad((x0, y0, z0), (x1, y0, z0), (x1, y0, z1), (x0, y0, z1), (0, -1, 0), u)
 
 
+def lifeguard_tower():
+    """LA County style tower: cabin on stilts facing +X (the water), ramp at the back."""
+    m = Mesh()
+    deck, cab_h, w, d = 1.6, 2.3, 2.6, 2.4
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            x, z = sx * (d / 2 - 0.15), sz * (w / 2 - 0.15)
+            _box(m, (x - 0.09, -0.6, z - 0.09), (x + 0.09, deck, z + 0.09), "tower_white")
+    _box(m, (-d / 2 - 0.5, deck - 0.15, -w / 2 - 0.2), (d / 2 + 0.6, deck, w / 2 + 0.2), "tower_white")  # deck
+    # cabin walls (window band texture) and roof
+    x0, x1, z0, z1, y0, y1 = -d / 2, d / 2, -w / 2, w / 2, deck, deck + cab_h
+    uw = _quad_uv("tower_wall")
+    m.quad((x1, y0, z1), (x1, y0, z0), (x1, y1, z0), (x1, y1, z1), (1, 0, 0), uw)      # front (sea)
+    m.quad((x0, y0, z0), (x0, y0, z1), (x0, y1, z1), (x0, y1, z0), (-1, 0, 0), uw)     # back
+    m.quad((x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1), (0, 0, 1), uw)      # sides
+    m.quad((x1, y0, z0), (x0, y0, z0), (x0, y1, z0), (x1, y1, z0), (0, 0, -1), uw)
+    _box(m, (x0 - 0.35, y1, z0 - 0.35), (x1 + 0.35, y1 + 0.18, z1 + 0.35), "tower_white")   # roof
+    _box(m, (x1 - 0.05, y1 + 0.18, -0.5), (x1 + 0.05, y1 + 0.55, 0.5), "sign_red")          # sign
+    # front railing posts and rail
+    _box(m, (x1 + 0.5, deck, z0 - 0.15), (x1 + 0.56, deck + 0.95, z1 + 0.15), "tower_white")
+    # ramp down to the sand behind the tower
+    ur = _quad_uv("tower_ramp")
+    m.quad((x0 - 4.2, 0.0, 0.5), (x0 - 4.2, 0.0, -0.5), (x0 - 0.5, deck, -0.5), (x0 - 0.5, deck, 0.5),
+           (-0.4, 0.9, 0), ur)
+    return m
+
+
+def volleyball_net(width):
+    m = Mesh()
+    hw = width / 2
+    for x in (-hw, hw):
+        _cylinder(m, x, 0, -0.6, 2.55, 0.05, 0.05, 6, "tower_white")
+    u = _quad_uv("net")
+    m.quad((-hw, 1.43, 0), (hw, 1.43, 0), (hw, 2.43, 0), (-hw, 2.43, 0), (0, 0, 1), u)
+    return m
+
+
 # --------------------------------------------------------------------------
 # Library of variants
 
@@ -370,6 +442,18 @@ class PropLibrary:
         name = f"shrub_{s:g}_{rnd.randrange(2)}"
         if name not in self.written:
             self._write(name, shrub(s, hash(name) & 0xFFFF), lod=2500)
+        return self.written[name]
+
+    def lifeguard_tower(self):
+        if "lifeguard_tower" not in self.written:
+            self._write("lifeguard_tower", lifeguard_tower(), lod=4000)
+        return self.written["lifeguard_tower"]
+
+    def volleyball_net(self, width):
+        w = round(width * 2) / 2
+        name = f"volleyball_net_{w:g}"
+        if name not in self.written:
+            self._write(name, volleyball_net(w), lod=2500)
         return self.written[name]
 
     def street_light(self, kind, base=0.0):

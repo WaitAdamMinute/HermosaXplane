@@ -4,7 +4,7 @@ import os
 import sys
 import tomllib
 
-from . import dsf, imagery, osm, trees
+from . import beach, dsf, imagery, osm, trees
 
 
 def main(argv=None):
@@ -29,6 +29,12 @@ def main(argv=None):
                 trees.fetch_lariac_trees(cfg["area"], os.path.join(data, "veg", "lariac_trees.json"))
             except Exception as ex:  # noqa: BLE001 - fall back to image-based detection
                 print(f"  LARIAC tree tops unavailable ({ex}); trees will be detected from imagery")
+        if cfg.get("beach", {}).get("enabled", True):
+            print("Fetching LA County lifeguard towers ...")
+            try:
+                beach.fetch_lacounty_towers(cfg["area"], os.path.join(data, "beach_lacounty.json"))
+            except Exception as ex:  # noqa: BLE001 - OSM towers only
+                print(f"  LA County lifeguard tower layer unavailable ({ex}); using OSM only")
     if a.command in ("fetch", "fetch-imagery", "all"):
         print("Fetching imagery ...")
         grid = imagery.Grid(cfg["area"], cfg["imagery"])

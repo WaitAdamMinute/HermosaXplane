@@ -91,12 +91,12 @@ def write_pol(path, texture_rel, chunk):
         f.write("LAYER_GROUP beaches 1\n")
 
 
-def compose_texture(photo, mask, atlas_img, chunk):
+def compose_texture(photo, mask, atlas_img, chunk, atlas_alpha=None):
     """Photo (top) + wall atlas strip (bottom), with alpha."""
     g = chunk.grid
     tex = atlas_img.copy()  # RGB, full size, strip already drawn
     tex.paste(photo, (0, 0))
-    a = Image.new("L", (g.tex, g.tex), 255)
+    a = atlas_alpha.copy() if atlas_alpha is not None else Image.new("L", (g.tex, g.tex), 255)
     a.paste(mask, (0, 0))
     tex.putalpha(a)
     return tex

@@ -64,6 +64,14 @@ basement = 2.0
 # Width of one window bay on the wall atlas.
 bay_width = 4.0
 lod_far = 7000.0
+# Pitched (gable / hip) roofs detected from the photo for houses up to this
+# height (m); the measured height is used as the ridge height.
+roof_shapes = true
+max_pitched_height = 13.0
+# Brightness difference between the two halves of a roof that marks it as
+# pitched (sun-lit vs shaded side).
+pitch_contrast = 0.12
+eave_overhang = 0.45
 
 [pier]
 enabled = true
@@ -103,6 +111,11 @@ max_crown_radius = 6.5
 # Baseline chance that a crown is a palm; raised for small isolated crowns
 # along streets and near the beach.
 palm_base = 0.12
+
+[beach]
+# Lifeguard towers and beach volleyball nets from OpenStreetMap (plus LA
+# County's lifeguard tower layer when it can be downloaded).
+enabled = true
 
 [lights]
 # Street lights along the OSM roads (real lamp positions are used instead if

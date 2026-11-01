@@ -40,6 +40,7 @@ def main(out):
     # pier
     pl = 33.8618
     way([(coast_lon(pl) + 0.0002, pl), (coast_lon(pl) - 0.0058, pl)], {"man_made": "pier", "width": "8"}, closed=False)
+    pitched_roofs = []
     # buildings: blocks east of the coast
     dlat, dlon = 9 / 111320, 9 / 92500
     for gy in range(0, 120, 4):
@@ -53,6 +54,7 @@ def main(out):
             if rnd.random() < 0.8:
                 tags["height"] = f"{rnd.uniform(4, 14):.1f}"
             coords = [(lon0, lat0), (lon0 + w, lat0), (lon0 + w, lat0 + h), (lon0, lat0 + h)]
+            pitched_roofs.append((coords, rnd.random() < 0.5, rnd.random() < 0.3))
             if rnd.random() < 0.2:  # L-shape
                 coords = [(lon0, lat0), (lon0 + w, lat0), (lon0 + w, lat0 + h / 2), (lon0 + w / 2, lat0 + h / 2),
                           (lon0 + w / 2, lat0 + h), (lon0, lat0 + h)]
@@ -63,6 +65,21 @@ def main(out):
         la = 33.852 + k * 0.003
         way([(coast_lon(la) + 0.0004, la), (a["east"] - 0.001, la)], {"highway": "residential"}, closed=False)
     way([(coast_lon(33.8618) + 0.0001, 33.8622), (coast_lon(33.8618) + 0.0001, 33.8650)], {"highway": "pedestrian"}, closed=False)
+    # alleys behind the houses, lifeguard towers and volleyball courts on the sand
+    for gy in range(0, 120, 4):
+        la = a["south"] + 0.001 + gy * 0.00022 - 0.00003
+        way([(coast_lon(la) + 0.0012, la), (a["east"] - 0.001, la)], {"highway": "service", "service": "alley"},
+            closed=False)
+    for k in range(6):
+        la = 33.853 + k * 0.004
+        nid[0] += 1
+        els.append({"type": "node", "id": nid[0], "lon": coast_lon(la) + 0.0004, "lat": la,
+                    "tags": {"emergency": "lifeguard", "lifeguard": "tower"}})
+    for k in range(8):
+        la = 33.8635 + k * 0.00012
+        lo = coast_lon(la) + 0.0007
+        way([(lo, la), (lo + 0.00018, la), (lo + 0.00018, la + 0.00008), (lo, la + 0.00008)],
+            {"leisure": "pitch", "sport": "beachvolleyball"})
     for k in range(20):
         nid[0] += 1
         els.append({"type": "node", "id": nid[0], "lon": a["west"] + 0.02 + k * 0.0005, "lat": 33.865,
@@ -96,6 +113,18 @@ def main(out):
                 shade = trnd.uniform(0.5, 1.1)
                 d.ellipse([x + ox - rr, y + oy - rr, x + ox + rr, y + oy + rr],
                           fill=(int(45 * shade), int(85 * shade), int(38 * shade)))
+        # roofs: pitched ones show a lit and a shaded half, flat ones are even
+        for coords, pitched, tile in pitched_roofs:
+            pts = [merc_px(lo, la, grid.zoom) for lo, la in coords]
+            pts = [(x - c.px0, y - c.py0) for x, y in pts]
+            if max(p[0] for p in pts) < 0 or min(p[0] for p in pts) > grid.chunk_w:
+                continue
+            base = (178, 96, 70) if tile else (150, 150, 146)
+            d.polygon(pts, fill=base)
+            if pitched:
+                (x0, y0), (x1, y1), (x2, y2), (x3, y3) = pts
+                half = [(x0, y0), (x1, y1), ((x1 + x2) / 2, (y1 + y2) / 2), ((x0 + x3) / 2, (y0 + y3) / 2)]
+                d.polygon(half, fill=tuple(int(v * 0.6) for v in base))
         im.save(os.path.join(out, "data", "imagery", c.name + ".jpg"), quality=90)
     print(f"synthetic data in {out}: {len(els)} elements, {len(grid.chunks)} chunks")
 

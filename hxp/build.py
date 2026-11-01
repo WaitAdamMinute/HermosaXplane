@@ -12,6 +12,8 @@ from shapely.prepared import prep
 from . import buildings as B
 from . import lights as L
 from . import ortho
+from . import beach as BE
+from .roofs import RoofClassifier
 from . import trees as T
 from .dsf import DSFText, compile_dsf, find_dsftool
 from .geo import LocalFrame, merc_px, tile_name
@@ -80,7 +82,7 @@ def build(cfg, root):
     for c in grid.chunks:
         photo = load_chunk_image(c, img_dir, icfg)
         mask = ortho.alpha_mask(c, frame, land, icfg)
-        tex = ortho.compose_texture(photo, mask, base, c)
+        tex = ortho.compose_texture(photo, mask, base, c, atlas.alpha)
         save_texture(tex, os.path.join(tex_dir, c.name), fmt, alpha=True, flip=flip)
         preview_parts.append((c, photo.resize((max(1, photo.size[0] // 4), max(1, photo.size[1] // 4)))))
         polys = ortho.draped_polygons(c, frame, coverage)
@@ -93,6 +95,9 @@ def build(cfg, root):
             dsf.polygon_uv(idx, windings)
         print(f"  {c.name}: {len(polys)} draped polygon(s)")
 
+    # ------------------------------------------------------- beach features
+    beach_feats = BE.collect(osm, frame, area_poly, os.path.join(data_dir, "beach_lacounty.json"))
+
     # ------------------------------------------------------------ buildings
     bcfg = dict(cfg["buildings"], _tex_ext=ext)
     placed_b = []
@@ -100,9 +105,14 @@ def build(cfg, root):
     if bcfg["enabled"]:
         print("Buildings ...")
         items = [(i, t, p) for i, t, p in osm.buildings() if inside.contains(p.centroid)]
+        items = BE.drop_tower_footprints(items, beach_feats)
+        ctx = {"coast": unary_union(coast) if coast else None, "alleys": osm.alleys()}
+        if bcfg.get("roof_shapes", True):
+            print("  classifying roof shapes from the photo ...")
+            ctx["roof"] = RoofClassifier(grid, img_dir, frame, bcfg)
         placed_b = B.make_objects(items, frame, grid, atlas, bcfg,
                                   os.path.join(pack, "objects", "buildings"),
-                                  "../../textures", f"../../textures/{os.path.basename(lit_path)}")
+                                  "../../textures", f"../../textures/{os.path.basename(lit_path)}", ctx=ctx)
         for name, lon, lat in placed_b:
             dsf.obj(dsf.obj_def(f"objects/buildings/{name}"), lon, lat)
 
@@ -150,6 +160,11 @@ def build(cfg, root):
         for obj, lon, lat, hd in placed_l:
             dsf.obj(dsf.obj_def(obj), lon, lat, hd)
         n_lights = len(placed_l)
+    if cfg.get("beach", {}).get("enabled", True):
+        print("Beach details ...")
+        coast_geom = unary_union(coast) if coast else None
+        for obj, lon, lat, hd in BE.place(beach_feats, lib, frame, coast_geom):
+            dsf.obj(dsf.obj_def(obj), lon, lat, hd)
     if lib.written:
         print(f"  {len(lib.written)} prop models; writing prop textures ...")
         pim, plit = paint_atlas()
