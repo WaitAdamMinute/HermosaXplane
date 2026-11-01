@@ -22,6 +22,7 @@ It replaces the default, misaligned scenery with:
 |---|---|
 | ![Approach from the ocean](docs/view_approach.jpg) | ![Pier Ave / downtown](docs/view_downtown.jpg) |
 | ![Valley Park, low level](docs/view_street.jpg) | ![Night](docs/view_night.jpg) |
+| ![Roofs and façades near Pier Ave](docs/view_houses.jpg) | ![Beach-area homes: roof decks, balconies](docs/view_beach.jpg) |
 
 *These are software renders of the real built pack, from `tests/render_view.py` (flat terrain, no shadows). They approximate the in-sim look and are not X-Plane screenshots.*
 
