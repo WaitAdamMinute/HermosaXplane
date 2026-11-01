@@ -44,9 +44,9 @@ texture_size = 4096
 wall_strip = 512
 # "dds" (DXT, mipmapped, recommended) or "png".
 texture_format = "dds"
-# X-Plane expects DDS data stored bottom-up.  Leave true unless photos appear
-# upside down in the sim.
-dds_flip = true
+# Desktop X-Plane reads DDS top-down (standard orientation; Laminar's DDSTool
+# only stores bottom-up for its mobile build).  Leave false.
+dds_flip = false
 # How far past the OSM coastline the photo is drawn fully opaque (covers the
 # surf zone and the pier), and the width of the fade to X-Plane's own water.
 sea_opaque = 650.0

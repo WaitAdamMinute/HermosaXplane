@@ -38,7 +38,7 @@ def build(cfg, root):
     os.makedirs(tex_dir)
     fmt = icfg["texture_format"]
     ext = "dds" if fmt == "dds" else "png"
-    flip = icfg.get("dds_flip", True)
+    flip = icfg.get("dds_flip", False)
 
     lon_c, lat_c = (area["west"] + area["east"]) / 2, (area["south"] + area["north"]) / 2
     frame = LocalFrame(lon_c, lat_c)

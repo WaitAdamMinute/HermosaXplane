@@ -20,8 +20,6 @@ _tex = {}
 def tex(path):
     if path not in _tex:
         im = Image.open(path).convert("RGBA")
-        if path.endswith(".dds"):
-            im = im.transpose(Image.FLIP_TOP_BOTTOM)  # stored bottom-up for X-Plane
         _tex[path] = np.asarray(im)
     return _tex[path]
 

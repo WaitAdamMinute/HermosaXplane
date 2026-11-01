@@ -16,7 +16,7 @@ def _dxt_payload(img, fmt):
     return b.getvalue()[128:]
 
 
-def save_dds(img, path, alpha=False, flip=True):
+def save_dds(img, path, alpha=False, flip=False):
     fmt = "DXT5" if alpha else "DXT1"
     img = img.convert("RGBA" if alpha else "RGB")
     if flip:
@@ -43,7 +43,7 @@ def save_dds(img, path, alpha=False, flip=True):
             f.write(lv)
 
 
-def save_texture(img, path_noext, fmt, alpha=False, flip=True):
+def save_texture(img, path_noext, fmt, alpha=False, flip=False):
     if fmt == "dds":
         p = path_noext + ".dds"
         save_dds(img, p, alpha=alpha, flip=flip)

@@ -36,8 +36,6 @@ SS = 1  # supersampling factor
 class Tex:
     def __init__(self, path):
         im = Image.open(path).convert("RGBA")
-        if path.endswith(".dds"):
-            im = im.transpose(Image.FLIP_TOP_BOTTOM)
         self.levels = []
         cur = im
         while True:

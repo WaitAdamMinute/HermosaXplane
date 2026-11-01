@@ -78,7 +78,7 @@ Each building is its own object, placed at its centroid. X-Plane then sets it on
 ## Tuning (`config.toml`)
 
 * **Higher-res photo:** set `source = "arcgis"`, `arcgis_url` to an ArcGIS `.../ImageServer/exportImage` (or `.../MapServer/export`) endpoint, and `zoom = 20` (~0.12 m/px). LA County's LARIAC 4-inch orthophotos are the best source for Hermosa Beach. Or set `zoom = 19`, `source = "xyz"` and an `xyz_url`. The default URL is Esri World Imagery. Check the provider's licence: most forbid redistribution, so keep such builds for personal use. NAIP is public domain.
-* **Photos upside down in the sim?** Set `dds_flip = false`, or use `texture_format = "png"`.
+* **Textures look wrong in the sim?** Try `texture_format = "png"`; X-Plane loads PNGs in one unambiguous orientation.
 * **Too much photo over the ocean?** Lower `sea_opaque` / `sea_fade`.
 * **3D road network with traffic and streetlights (experimental):** set `[roads] enabled = true` and map OSM `highway` values to road type numbers from your X-Plane's `Resources/default scenery/1000 roads/roads.net`.
 
